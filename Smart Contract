@@ -1,0 +1,111 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.17;
+
+contract Voting {
+    struct Candidate {
+        string name;
+        uint256 voteCount;
+    }
+
+    mapping(address => bool)  hasVoted;
+    mapping(uint256 => Candidate)  candidate_info;
+    uint256  candidateCount;
+    uint256  totalVotes;
+    address  owner;
+    bool public votingOpen;
+    bool public initialized;
+
+    event CandidateAdded(uint256 candidateId, string name);
+    event VoteCasted(uint256 candidateId, address voter);
+    event VotingStarted();
+    event VotingEnded();
+
+    // Custom errors
+    error NotOwner(address caller);
+    error VotingNotOpen();
+    error AlreadyVoted(address voter);
+    error InvalidCandidate(uint256 candidateId);
+    error AlreadyInitialized();
+
+    modifier onlyOwner() {
+        if (msg.sender != owner) {
+            revert NotOwner(msg.sender);
+        }
+        _;
+    }
+
+    modifier isVotingOpen() {
+        if (!votingOpen) {
+            revert VotingNotOpen();
+        }
+        _;
+    }
+
+    function initialize() public {
+        if (initialized) {
+            revert AlreadyInitialized();
+        }
+        owner = msg.sender;
+        votingOpen = false;
+        totalVotes = 0;
+        initialized = true;
+    }
+
+    function addCandidate(string memory _name) public onlyOwner {
+        require(bytes(_name).length > 0, "Candidate name must not be empty");
+
+        candidateCount++;
+        candidate_info[candidateCount] = Candidate(_name, 0);
+
+        emit CandidateAdded(candidateCount, _name);
+    }
+
+    function startVoting() public onlyOwner {
+        require(!votingOpen, "Voting is already open");
+
+        votingOpen = true;
+
+        emit VotingStarted();
+    }
+
+    function endVoting() public onlyOwner {
+        require(votingOpen, "Voting is not open");
+
+        votingOpen = false;
+
+        emit VotingEnded();
+    }
+
+    function vote(uint256 _candidateId,address Voter_Address) public isVotingOpen {
+        require(!hasVoted[Voter_Address], "You have already voted");
+        if (_candidateId == 0 || _candidateId > candidateCount) {
+            revert InvalidCandidate(_candidateId);
+        }
+
+        candidate_info[_candidateId].voteCount++;
+        hasVoted[Voter_Address] = true;
+        totalVotes++;
+
+        assert(totalVotes == getTotalVotes());
+
+        emit VoteCasted(_candidateId, msg.sender);
+    }
+
+    function getCandidate(uint256 _candidateId) public view returns (Candidate memory) {
+        require(_candidateId > 0 && _candidateId <= candidateCount, "Invalid candidate ID");
+        return candidate_info[_candidateId];
+    }
+
+    function totalVotesForCandidate(uint256 _candidateId) public view returns (uint256) {
+        require(_candidateId > 0 && _candidateId <= candidateCount, "Invalid candidate ID");
+        return candidate_info[_candidateId].voteCount;
+    }
+
+    function getTotalVotes() public view returns (uint256) {
+        uint256 total = 0;
+        for (uint256 i = 1; i <= candidateCount; i++) {
+            total += candidate_info[i].voteCount;
+        }
+        return total;
+    }
+}
