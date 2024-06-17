@@ -147,7 +147,7 @@ Once the contract is deployed, you can interact with it by calling the functions
    - Call `initialize();`
 
 2. **Add Candidate**:
-   - Call `addCandidate("Alice");`
+   - Call `addCandidate("A");`
 
 3. **Start Voting**:
    - Call `startVoting();`
